@@ -16,8 +16,9 @@ public class AuthController {
     private final UserService userService;
 
     @PostMapping("/login")
-    public void login(@RequestBody String firebaseUId){
-        userService.login(firebaseUId);
+    public void login(@RequestBody String firebaseId,String email){
+
+        userService.login(firebaseId, email);
     }
 
 }

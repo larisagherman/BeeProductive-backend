@@ -18,19 +18,18 @@ import java.util.Optional;
 public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-    public void login(String token) {
-//this is just a mok login cause we do not have the firebase login just yet
-
-        Optional<User> user=userRepository.findByFireBaseId(token);
-        if(user.isEmpty()){
-            register(token, "test name");
+    public void login(String firebaseId,String email) {
+        //this is just a mok login because we do not have the firebase login just yet
+        User user=userRepository.findByFireBaseId(firebaseId);
+        if(user==null){
+            register(firebaseId, email);
         }
 
     }
-    public void register(String firebaseUId, String name) {
+    public void register(String firebaseUId, String email) {
         User user = new User();
         user.setFireBaseId(firebaseUId);
-        user.setName(name);
+        user.setName(email.split("@")[0]);
         user.setNumberOfBees(10);
         userRepository.save(user);
     }
