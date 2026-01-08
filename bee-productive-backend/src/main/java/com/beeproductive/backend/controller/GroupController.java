@@ -31,11 +31,13 @@ public class GroupController {
     public void deleteGroupById(@PathVariable("id") Long id) {
         groupService.deleteGroupById(id);
     }
-    @PutMapping("/{id}")
+
+    @PutMapping("/update-group-details/{id}")
     public void updateGroupById(@PathVariable("id") Long id, @RequestBody GroupRequestDto groupRequestDto) {
         groupService.updateGroupDetailsByGroupId(id, groupRequestDto);
     }
-    @PutMapping("/{id}/update-members")
+
+    @PutMapping("/{id}/add-group-members")
     public void updateMembersGroupById(@PathVariable("id") Long id, @RequestBody GroupRequestDto groupRequestDto) {
         groupService.updateGroupMembersByGroupId(id, groupRequestDto);
     }

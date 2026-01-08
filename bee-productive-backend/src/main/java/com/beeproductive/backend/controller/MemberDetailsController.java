@@ -15,6 +15,10 @@ import java.util.List;
 @RestController("/member-details")
 public class MemberDetailsController {
     private final MemberDetailsService memberDetailsService;
+    @GetMapping("/groups-users")
+    public List<MemberDetailsResponseDto> getAllMemberDetails() {
+        return memberDetailsService.getAllMemberDetails();
+    }
     @PostMapping("/groups/{groupId}/members/{userId}")
     public void addMember(@PathVariable Long userId, @PathVariable Long groupId) {
         memberDetailsService.addMember(userId, groupId);
@@ -24,10 +28,7 @@ public class MemberDetailsController {
         MemberKey memberKey = new MemberKey(userId, groupId);
         return memberDetailsService.getMemberDetailsByMemberKey(memberKey);
     }
-    @GetMapping
-    public List<MemberDetailsResponseDto> getAllMemberDetails() {
-        return memberDetailsService.getAllMemberDetails();
-    }
+
     @DeleteMapping("/groups/{groupId}/members/{userId}")
     public void deleteMember(@PathVariable Long userId, @PathVariable Long groupId) {
         memberDetailsService.removeMember(userId,groupId);

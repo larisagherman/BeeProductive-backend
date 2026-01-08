@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -26,8 +27,13 @@ public class Group {
     @JoinColumn(name = "adminId")
     private User userAdmin;
 
-    @ManyToMany(mappedBy = "groupList")
-    private Set<Challenge> challengeList;
+    @ManyToMany
+    @JoinTable(
+            name = "group_challenges",
+            joinColumns = @JoinColumn(name = "group_id"),
+            inverseJoinColumns = @JoinColumn(name = "challenge_id")
+    )
+    private Set<Challenge> challengeList = new HashSet<>();
 
     @OneToMany(mappedBy = "group")
     private Set<MemberDetails> memberData;

@@ -36,18 +36,22 @@ public class GroupService {
             Set<Challenge> challenges=new HashSet<>(challengeRepository.findAllById(groupRequestDto.getChallengeIds()));
             group.setChallengeList(challenges);
         }
+        groupRepository.save(group);
 
         if(!groupRequestDto.getMembersIds().isEmpty()) {
             for(Long memberId : groupRequestDto.getMembersIds()) {
                 User member=userRepository.findById(memberId).orElse(null);
 
                 MemberDetails memberDetails=new MemberDetails();
+                MemberKey key = new MemberKey(member.getId(), group.getId());
+                memberDetails.setId(key);
                 memberDetails.setGroup(group);
                 memberDetails.setUser(member);
-                memberDetails.setKgOfHoney(10);
+                memberDetails.setKgOfHoney(0);
+
+                memberDetailsRepository.save(memberDetails);
             }
         }
-        groupRepository.save(group);
     }
     public List<GroupResponseDto> getAllGroups() {
         List<Group> groups=groupRepository.findAll();
@@ -73,19 +77,32 @@ public class GroupService {
         }
         groupRepository.save(group);
     }
-    public void updateGroupMembersByGroupId(Long id, GroupRequestDto groupRequestDto) {
-        Group group=groupRepository.findById(id).orElseThrow(()->new RuntimeException("Group not found!"));
-        if(!groupRequestDto.getMembersIds().isEmpty()) {
-            /*
-            Set<MemberDetails> members=new HashSet<>(memberDetailsRepository.findAllById((groupRequestDto.getMembersIds())));
-            for(MemberDetails challenge:challenges) {
-                challenge.getGroupList().add(group);
-            }
-            group.setChallengeList(challenges);
+    public void updateGroupMembersByGroupId(Long groupId, GroupRequestDto groupRequestDto) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found!"));
 
-             */
+        Set<MemberDetails> currentMembers = group.getMemberData();
+
+        Set<Long> newMemberIds = new HashSet<>(groupRequestDto.getMembersIds());
+        //add new members
+        for (Long userId : newMemberIds) {
+            boolean alreadyMember = currentMembers != null && currentMembers.stream()
+                    .anyMatch(md -> md.getUser().getId().equals(userId));
+            if (!alreadyMember) {
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                MemberDetails md = new MemberDetails();
+                MemberKey key = new MemberKey(userId, groupId);
+                md.setId(key);
+                md.setUser(user);
+                md.setGroup(group);
+                md.setKgOfHoney(0);
+                memberDetailsRepository.save(md);
+            }
         }
         groupRepository.save(group);
     }
+
 
 }

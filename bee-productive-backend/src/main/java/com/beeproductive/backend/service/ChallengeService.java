@@ -15,6 +15,7 @@ import java.util.List;
 public class ChallengeService {
     private final ChallengeRepository challengeRepository;
     private final ChallengeMapper challengeMapper;
+
     public void createChallenge(ChallengeRequestDto createChallengeRequestDto) {
         Challenge newChallenge = new Challenge();
         newChallenge.setName(createChallengeRequestDto.getName());
@@ -25,8 +26,9 @@ public class ChallengeService {
         Challenge challenge = challengeRepository.findById(id).orElseThrow(()-> new RuntimeException("Challenge not found"));
         return challengeMapper.challengeToChallengeResponseDto(challenge);
     }
-    public List<Challenge> getAllChallenges() {
-        return challengeRepository.findAll();
+    public List<ChallengeResponseDto> getAllChallenges() {
+        List<Challenge> challenges=challengeRepository.findAll();
+        return challengeMapper.challengeToChallengeResponseDtoList(challenges);
     }
     public void updateChallenge(Long id, ChallengeRequestDto updateChallengeRequestDto) {
         Challenge updateChallenge = challengeRepository.findById(id).orElseThrow(()-> new RuntimeException("Challenge not found"));

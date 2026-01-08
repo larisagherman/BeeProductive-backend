@@ -19,9 +19,10 @@ public class ChallengeController {
         challengeService.createChallenge(challengeRequestDto);
     }
     @GetMapping
-    public List<Challenge> getAllChallenges() {
+    public List<ChallengeResponseDto> getAllChallenges() {
         return challengeService.getAllChallenges();
     }
+
     @GetMapping("/{id}")
     public ChallengeResponseDto getChallengeById(@PathVariable("id") Long id) {
         return challengeService.getChallengeById(id);
