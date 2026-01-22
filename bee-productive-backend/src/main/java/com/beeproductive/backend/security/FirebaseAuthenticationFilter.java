@@ -1,11 +1,13 @@
 package com.beeproductive.backend.security;
 
+import com.beeproductive.backend.service.UserProvisioningService;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,17 +22,20 @@ public class FirebaseAuthenticationFilter
         extends OncePerRequestFilter {
 
     private final FirebaseTokenService tokenService;
+    private final UserProvisioningService userProvisioningService;
 
     public FirebaseAuthenticationFilter(
-            FirebaseTokenService tokenService) {
+            FirebaseTokenService tokenService,
+            UserProvisioningService userProvisioningService) {
         this.tokenService = tokenService;
+        this.userProvisioningService = userProvisioningService;
     }
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
@@ -60,6 +65,9 @@ public class FirebaseAuthenticationFilter
                         HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
+
+            // Provision user in database if they don't exist
+            userProvisioningService.provisionUser(firebaseToken);
 
             UsernamePasswordAuthenticationToken auth =
                     new UsernamePasswordAuthenticationToken(

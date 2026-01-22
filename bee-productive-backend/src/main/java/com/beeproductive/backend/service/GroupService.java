@@ -1,108 +1,117 @@
 package com.beeproductive.backend.service;
 
-import com.beeproductive.backend.dto.GroupRequestDto;
+import com.beeproductive.backend.dto.CreateGroupRequestDto;
 import com.beeproductive.backend.dto.GroupResponseDto;
-import com.beeproductive.backend.entity.*;
-import com.beeproductive.backend.mapper.GroupMapper;
-import com.beeproductive.backend.repository.ChallengeRepository;
+import com.beeproductive.backend.dto.JoinGroupRequestDto;
+import com.beeproductive.backend.dto.JoinGroupResponseDto;
+import com.beeproductive.backend.entity.Group;
+import com.beeproductive.backend.entity.User;
+import com.beeproductive.backend.exception.AlreadyMemberException;
+import com.beeproductive.backend.exception.GroupNotFoundException;
 import com.beeproductive.backend.repository.GroupRepository;
-import com.beeproductive.backend.repository.MemberDetailsRepository;
 import com.beeproductive.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.security.SecureRandom;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
 public class GroupService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
-    private final ChallengeRepository challengeRepository;
-    private final GroupMapper groupMapper;
-    private final MemberDetailsRepository memberDetailsRepository;
 
-    public void createGroup(GroupRequestDto groupRequestDto) {
-        User adminUser=userRepository.findById(groupRequestDto.getAdminId()).orElseThrow(()->new RuntimeException("Admin for this group not found!"));
+    private static final String CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int CODE_LENGTH = 8;
+    private static final SecureRandom random = new SecureRandom();
 
-        Group group=new Group();
-        group.setUserAdmin(adminUser);
+    @Transactional
+    public GroupResponseDto createGroup(CreateGroupRequestDto groupRequestDto) {
+        // Find or create user
+        User user = userRepository.findByFireBaseId(groupRequestDto.getUserUid())
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setFireBaseId(groupRequestDto.getUserUid());
+                    newUser.setName("User"); // Default name, can be updated later
+                    newUser.setNumberOfBees(0);
+                    return userRepository.save(newUser);
+                });
+
+        // Generate unique code for the group
+        String groupCode = generateUniqueGroupCode();
+
+        // Create and save group
+        Group group = new Group();
         group.setName(groupRequestDto.getName());
+        group.setCode(groupCode);
+        group.setUserAdmin(user);
 
-        if(!groupRequestDto.getChallengeIds().isEmpty()) {
-            Set<Challenge> challenges=new HashSet<>(challengeRepository.findAllById(groupRequestDto.getChallengeIds()));
-            group.setChallengeList(challenges);
+        // Add admin user to the group's users
+        group.getUsers().add(user);
+
+        Group savedGroup = groupRepository.save(group);
+
+        return new GroupResponseDto(savedGroup.getName(), savedGroup.getCode());
+    }
+
+    private String generateUniqueGroupCode() {
+        String code;
+        do {
+            StringBuilder sb = new StringBuilder(CODE_LENGTH);
+            for (int i = 0; i < CODE_LENGTH; i++) {
+                sb.append(CODE_CHARACTERS.charAt(random.nextInt(CODE_CHARACTERS.length())));
+            }
+            code = sb.toString();
+        } while (groupRepository.existsByCode(code));
+        return code;
+    }
+
+    @Transactional
+    public JoinGroupResponseDto joinGroup(JoinGroupRequestDto joinGroupRequestDto) {
+        // Validate group code is not null or empty
+        if (joinGroupRequestDto.getGroupCode() == null || joinGroupRequestDto.getGroupCode().trim().isEmpty()) {
+            throw new GroupNotFoundException("Group code cannot be empty");
         }
+
+        // Normalize the group code (trim and uppercase)
+        String normalizedCode = joinGroupRequestDto.getGroupCode().trim().toUpperCase();
+
+        // Check if group exists
+        Optional<Group> groupOptional = groupRepository.findByCode(normalizedCode);
+        if (groupOptional.isEmpty()) {
+            throw new GroupNotFoundException("Group with code '" + normalizedCode + "' does not exist");
+        }
+
+        Group group = groupOptional.get();
+
+        // Find or create user
+        User user = userRepository.findByFireBaseId(joinGroupRequestDto.getUserUid())
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setFireBaseId(joinGroupRequestDto.getUserUid());
+                    newUser.setName("User"); // Default name, can be updated later
+                    newUser.setNumberOfBees(0);
+                    return userRepository.save(newUser);
+                });
+
+        // Check if user is already in the group
+        if (group.getUsers().contains(user)) {
+            throw new AlreadyMemberException("You are already a member of this group");
+        }
+
+        // Add user to group
+        group.getUsers().add(user);
         groupRepository.save(group);
 
-        if(!groupRequestDto.getMembersIds().isEmpty()) {
-            for(Long memberId : groupRequestDto.getMembersIds()) {
-                User member=userRepository.findById(memberId).orElse(null);
-
-                MemberDetails memberDetails=new MemberDetails();
-                MemberKey key = new MemberKey(member.getId(), group.getId());
-                memberDetails.setId(key);
-                memberDetails.setGroup(group);
-                memberDetails.setUser(member);
-                memberDetails.setKgOfHoney(0);
-
-                memberDetailsRepository.save(memberDetails);
-            }
-        }
+        return new JoinGroupResponseDto(
+                "Successfully joined the group",
+                group.getName(),
+                group.getCode()
+        );
     }
-    public List<GroupResponseDto> getAllGroups() {
-        List<Group> groups=groupRepository.findAll();
-        return groupMapper.groupToResponseDtoList(groups);
-    }
-    public GroupResponseDto getGroupById(Long id) {
-        Group group=groupRepository.findById(id).orElseThrow(()->new RuntimeException("Group not found!"));
-        return groupMapper.groupToResponseDto(group);
-    }
-    public void deleteGroupById(Long id) {
-        Group group=groupRepository.findById(id).orElseThrow(()->new RuntimeException("Group not found!"));
-        groupRepository.delete(group);
-    }
-    public void updateGroupDetailsByGroupId(Long id, GroupRequestDto groupRequestDto) {
-        Group group=groupRepository.findById(id).orElseThrow(()->new RuntimeException("Group not found!"));
-        group.setName(groupRequestDto.getName());
-        if(!groupRequestDto.getChallengeIds().isEmpty()) {
-            Set<Challenge> challenges=new HashSet<>(challengeRepository.findAllById((groupRequestDto.getChallengeIds())));
-            for(Challenge challenge:challenges) {
-                challenge.getGroupList().add(group);
-            }
-            group.setChallengeList(challenges);
-        }
-        groupRepository.save(group);
-    }
-    public void updateGroupMembersByGroupId(Long groupId, GroupRequestDto groupRequestDto) {
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found!"));
-
-        Set<MemberDetails> currentMembers = group.getMemberData();
-
-        Set<Long> newMemberIds = new HashSet<>(groupRequestDto.getMembersIds());
-        //add new members
-        for (Long userId : newMemberIds) {
-            boolean alreadyMember = currentMembers != null && currentMembers.stream()
-                    .anyMatch(md -> md.getUser().getId().equals(userId));
-            if (!alreadyMember) {
-                User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-
-                MemberDetails md = new MemberDetails();
-                MemberKey key = new MemberKey(userId, groupId);
-                md.setId(key);
-                md.setUser(user);
-                md.setGroup(group);
-                md.setKgOfHoney(0);
-                memberDetailsRepository.save(md);
-            }
-        }
-        groupRepository.save(group);
-    }
-
-
 }
+
+
+

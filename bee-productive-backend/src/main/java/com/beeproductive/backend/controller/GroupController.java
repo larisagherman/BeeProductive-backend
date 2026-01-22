@@ -1,44 +1,37 @@
 package com.beeproductive.backend.controller;
 
-import com.beeproductive.backend.dto.GroupRequestDto;
+import com.beeproductive.backend.dto.CreateGroupRequestDto;
 import com.beeproductive.backend.dto.GroupResponseDto;
+import com.beeproductive.backend.dto.JoinGroupRequestDto;
+import com.beeproductive.backend.dto.JoinGroupResponseDto;
+import com.beeproductive.backend.security.FirebaseUserPrincipal;
 import com.beeproductive.backend.service.GroupService;
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/group")
 public class GroupController {
     private GroupService groupService;
-    @PostMapping
-    public void createGroup(@RequestBody GroupRequestDto groupRequestDto) {
-        groupService.createGroup(groupRequestDto);
-    }
-    @GetMapping
-    public List<GroupResponseDto> getGroups() {
 
-        return groupService.getAllGroups();
-    }
-    @GetMapping("/{id}")
-    public GroupResponseDto getGroupById(@PathVariable("id") Long id) {
-        return groupService.getGroupById(id);
-    }
-    @DeleteMapping("/{id}")
-    public void deleteGroupById(@PathVariable("id") Long id) {
-        groupService.deleteGroupById(id);
+    @PostMapping("/create")
+    public GroupResponseDto createGroup(
+            @RequestBody CreateGroupRequestDto groupRequestDto,
+            @AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        // Set the authenticated user's UID in the DTO
+        groupRequestDto.setUserUid(principal.getUid());
+        return groupService.createGroup(groupRequestDto);
     }
 
-    @PutMapping("/update-group-details/{id}")
-    public void updateGroupById(@PathVariable("id") Long id, @RequestBody GroupRequestDto groupRequestDto) {
-        groupService.updateGroupDetailsByGroupId(id, groupRequestDto);
+    @PostMapping("/join")
+    public JoinGroupResponseDto joinGroup(
+            @RequestBody JoinGroupRequestDto joinGroupRequestDto,
+            @AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        // Set the authenticated user's UID in the DTO
+        joinGroupRequestDto.setUserUid(principal.getUid());
+        return groupService.joinGroup(joinGroupRequestDto);
     }
 
-    @PutMapping("/{id}/add-group-members")
-    public void updateMembersGroupById(@PathVariable("id") Long id, @RequestBody GroupRequestDto groupRequestDto) {
-        groupService.updateGroupMembersByGroupId(id, groupRequestDto);
-    }
 }

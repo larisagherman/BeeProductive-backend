@@ -1,16 +1,14 @@
 package com.beeproductive.backend.dto;
 
+import com.beeproductive.backend.entity.ChallengeEnrollmentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.sql.Date;
-import java.sql.Time;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ScreenTimeRequestDto {
-    private Date date;
-    private Time time;
-    private Long userId;
+public class UpdateEnrollmentStatusRequestDto {
+    private ChallengeEnrollmentStatus status;
 }
+
