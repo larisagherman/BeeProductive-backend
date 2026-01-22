@@ -4,6 +4,8 @@ import com.beeproductive.backend.dto.CreateGroupRequestDto;
 import com.beeproductive.backend.dto.GroupResponseDto;
 import com.beeproductive.backend.dto.JoinGroupRequestDto;
 import com.beeproductive.backend.dto.JoinGroupResponseDto;
+import com.beeproductive.backend.dto.LeaderboardResponseDto;
+import com.beeproductive.backend.dto.LeaderboardUserDto;
 import com.beeproductive.backend.entity.Group;
 import com.beeproductive.backend.entity.User;
 import com.beeproductive.backend.exception.AlreadyMemberException;
@@ -15,6 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -109,6 +114,54 @@ public class GroupService {
                 "Successfully joined the group",
                 group.getName(),
                 group.getCode()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public LeaderboardResponseDto getLeaderboard(String groupCode) {
+        // Validate group code is not null or empty
+        if (groupCode == null || groupCode.trim().isEmpty()) {
+            throw new GroupNotFoundException("Group code cannot be empty");
+        }
+
+        // Normalize the group code (trim and uppercase)
+        String normalizedCode = groupCode.trim().toUpperCase();
+
+        // Check if group exists
+        Optional<Group> groupOptional = groupRepository.findByCode(normalizedCode);
+        if (groupOptional.isEmpty()) {
+            throw new GroupNotFoundException("Group with code '" + normalizedCode + "' does not exist");
+        }
+
+        Group group = groupOptional.get();
+
+        // Get all users in the group and sort by number of bees (descending)
+        List<User> users = new ArrayList<>(group.getUsers());
+        users.sort(Comparator.comparingInt(User::getNumberOfBees).reversed());
+
+        // Create leaderboard with ranks
+        List<LeaderboardUserDto> leaderboard = new ArrayList<>();
+        int rank = 1;
+        int previousBees = -1;
+        int actualRank = 1;
+
+        for (User user : users) {
+            if (user.getNumberOfBees() != previousBees) {
+                rank = actualRank;
+            }
+            leaderboard.add(new LeaderboardUserDto(
+                    user.getName(),
+                    user.getNumberOfBees(),
+                    rank
+            ));
+            previousBees = user.getNumberOfBees();
+            actualRank++;
+        }
+
+        return new LeaderboardResponseDto(
+                group.getName(),
+                group.getCode(),
+                leaderboard
         );
     }
 }

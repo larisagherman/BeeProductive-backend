@@ -1,9 +1,6 @@
 package com.beeproductive.backend.controller;
 
-import com.beeproductive.backend.dto.CreateGroupRequestDto;
-import com.beeproductive.backend.dto.GroupResponseDto;
-import com.beeproductive.backend.dto.JoinGroupRequestDto;
-import com.beeproductive.backend.dto.JoinGroupResponseDto;
+import com.beeproductive.backend.dto.*;
 import com.beeproductive.backend.security.FirebaseUserPrincipal;
 import com.beeproductive.backend.service.GroupService;
 import lombok.AllArgsConstructor;
@@ -34,4 +31,8 @@ public class GroupController {
         return groupService.joinGroup(joinGroupRequestDto);
     }
 
+    @GetMapping("/leaderboard/{groupCode}")
+    public LeaderboardResponseDto getLeaderboard(@PathVariable String groupCode) {
+        return groupService.getLeaderboard(groupCode);
+    }
 }
