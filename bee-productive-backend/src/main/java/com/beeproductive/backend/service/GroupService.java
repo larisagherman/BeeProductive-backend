@@ -6,6 +6,7 @@ import com.beeproductive.backend.dto.JoinGroupRequestDto;
 import com.beeproductive.backend.dto.JoinGroupResponseDto;
 import com.beeproductive.backend.dto.LeaderboardResponseDto;
 import com.beeproductive.backend.dto.LeaderboardUserDto;
+import com.beeproductive.backend.dto.UserGroupDto;
 import com.beeproductive.backend.entity.Group;
 import com.beeproductive.backend.entity.User;
 import com.beeproductive.backend.exception.AlreadyMemberException;
@@ -163,6 +164,28 @@ public class GroupService {
                 group.getCode(),
                 leaderboard
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserGroupDto> getMyGroups(String userUid) {
+        // Find user
+        User user = userRepository.findByFireBaseId(userUid)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Get all groups the user is a member of
+        List<UserGroupDto> userGroups = new ArrayList<>();
+
+        for (Group group : user.getGroups()) {
+            UserGroupDto dto = new UserGroupDto();
+            dto.setId(group.getId());
+            dto.setName(group.getName());
+            dto.setCode(group.getCode());
+            dto.setAdmin(group.getUserAdmin() != null && group.getUserAdmin().getId().equals(user.getId()));
+            dto.setMemberCount(group.getUsers().size());
+            userGroups.add(dto);
+        }
+
+        return userGroups;
     }
 }
 

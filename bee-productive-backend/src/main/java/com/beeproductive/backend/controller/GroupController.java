@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @AllArgsConstructor
 @RequestMapping("/group")
@@ -34,5 +36,10 @@ public class GroupController {
     @GetMapping("/leaderboard/{groupCode}")
     public LeaderboardResponseDto getLeaderboard(@PathVariable String groupCode) {
         return groupService.getLeaderboard(groupCode);
+    }
+
+    @GetMapping("/my-groups")
+    public List<UserGroupDto> getMyGroups(@AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        return groupService.getMyGroups(principal.getUid());
     }
 }
