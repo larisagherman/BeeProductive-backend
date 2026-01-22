@@ -1,6 +1,7 @@
 package com.beeproductive.backend.service;
 
 import com.beeproductive.backend.dto.CreateGroupRequestDto;
+import com.beeproductive.backend.dto.GroupInfoDto;
 import com.beeproductive.backend.dto.GroupResponseDto;
 import com.beeproductive.backend.dto.JoinGroupRequestDto;
 import com.beeproductive.backend.dto.JoinGroupResponseDto;
@@ -186,6 +187,35 @@ public class GroupService {
         }
 
         return userGroups;
+    }
+
+    @Transactional(readOnly = true)
+    public GroupInfoDto getGroupInfo(String groupCode) {
+        // Validate group code is not null or empty
+        if (groupCode == null || groupCode.trim().isEmpty()) {
+            throw new GroupNotFoundException("Group code cannot be empty");
+        }
+
+        // Normalize the group code (trim and uppercase)
+        String normalizedCode = groupCode.trim().toUpperCase();
+
+        // Check if group exists
+        Optional<Group> groupOptional = groupRepository.findByCode(normalizedCode);
+        if (groupOptional.isEmpty()) {
+            throw new GroupNotFoundException("Group with code '" + normalizedCode + "' does not exist");
+        }
+
+        Group group = groupOptional.get();
+
+        // Build response DTO
+        GroupInfoDto dto = new GroupInfoDto();
+        dto.setId(group.getId());
+        dto.setName(group.getName());
+        dto.setCode(group.getCode());
+        dto.setAdminName(group.getUserAdmin() != null ? group.getUserAdmin().getName() : "Unknown");
+        dto.setMemberCount(group.getUsers().size());
+
+        return dto;
     }
 }
 

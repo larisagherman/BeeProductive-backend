@@ -42,4 +42,9 @@ public class GroupController {
     public List<UserGroupDto> getMyGroups(@AuthenticationPrincipal FirebaseUserPrincipal principal) {
         return groupService.getMyGroups(principal.getUid());
     }
+
+    @GetMapping("/info/{groupCode}")
+    public GroupInfoDto getGroupInfo(@PathVariable String groupCode) {
+        return groupService.getGroupInfo(groupCode);
+    }
 }

@@ -24,7 +24,7 @@ public class UserChallengeEnrollment {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @MapsId("challengeId")
     @JoinColumn(name = "challenge_id", nullable = false)
     private Challenge challenge;

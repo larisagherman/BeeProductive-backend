@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -74,9 +75,19 @@ public class ChallengeService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChallengeDto> getAllChallenges() {
+    public List<ChallengeDto> getAllChallenges(String userUid) {
+        // Find user if userUid is provided
+        Long userId = null;
+        if (userUid != null && !userUid.isEmpty()) {
+            Optional<User> userOptional = userRepository.findByFireBaseId(userUid);
+            if (userOptional.isPresent()) {
+                userId = userOptional.get().getId();
+            }
+        }
+
+        final Long finalUserId = userId;
         return challengeRepository.findAll().stream()
-                .map(this::convertToDto)
+                .map(challenge -> convertToDto(challenge, finalUserId))
                 .collect(Collectors.toList());
     }
 
@@ -86,10 +97,10 @@ public class ChallengeService {
                 .orElseThrow(() -> new ChallengeNotFoundException(
                         "Challenge with ID " + challengeId + " does not exist"
                 ));
-        return convertToDto(challenge);
+        return convertToDto(challenge, null);  // Don't check enrollment for single challenge view
     }
 
-    private ChallengeDto convertToDto(Challenge challenge) {
+    private ChallengeDto convertToDto(Challenge challenge, Long userId) {
         ChallengeDto dto = new ChallengeDto();
         dto.setId(challenge.getId());
         dto.setName(challenge.getName());
@@ -99,13 +110,24 @@ public class ChallengeService {
         dto.setEndDate(challenge.getEndDate());
         dto.setRewardBees(challenge.getRewardBees());
 
+        // Check if user is enrolled (if userId is provided)
+        if (userId != null) {
+            boolean isEnrolled = enrollmentRepository.existsByUser_IdAndChallenge_Id(userId, challenge.getId());
+            dto.setIsEnrolled(isEnrolled);
+        } else {
+            dto.setIsEnrolled(null);  // Not checked
+        }
+
         // Set type-specific fields
-        switch (challenge) {
-            case ScreenTimeReductionChallenge specific -> dto.setReductionPercentage(specific.getReductionPercentage());
-            case AppBlockingChallenge specific -> dto.setBlockedApps(specific.getBlockedApps());
-            case DailyLimitChallenge specific -> dto.setMaxDailyMinutes(specific.getMaxDailyMinutes());
-            default -> {
-            }
+        if (challenge instanceof ScreenTimeReductionChallenge) {
+            ScreenTimeReductionChallenge specific = (ScreenTimeReductionChallenge) challenge;
+            dto.setReductionPercentage(specific.getReductionPercentage());
+        } else if (challenge instanceof AppBlockingChallenge) {
+            AppBlockingChallenge specific = (AppBlockingChallenge) challenge;
+            dto.setBlockedApps(specific.getBlockedApps());
+        } else if (challenge instanceof DailyLimitChallenge) {
+            DailyLimitChallenge specific = (DailyLimitChallenge) challenge;
+            dto.setMaxDailyMinutes(specific.getMaxDailyMinutes());
         }
 
         return dto;
@@ -128,6 +150,8 @@ public class ChallengeService {
 
     private UserChallengeEnrollmentDto convertEnrollmentToDto(UserChallengeEnrollment enrollment) {
         Challenge challenge = enrollment.getChallenge();
+        // Force Hibernate to load the actual challenge subclass
+        challenge.getId(); // Trigger proxy initialization
 
         UserChallengeEnrollmentDto dto = new UserChallengeEnrollmentDto();
         dto.setChallengeId(challenge.getId());
@@ -142,12 +166,15 @@ public class ChallengeService {
         dto.setUpdatedAt(enrollment.getUpdatedAt());
 
         // Set type-specific fields
-        switch (challenge) {
-            case ScreenTimeReductionChallenge specific -> dto.setReductionPercentage(specific.getReductionPercentage());
-            case AppBlockingChallenge specific -> dto.setBlockedApps(specific.getBlockedApps());
-            case DailyLimitChallenge specific -> dto.setMaxDailyMinutes(specific.getMaxDailyMinutes());
-            default -> {
-            }
+        if (challenge instanceof ScreenTimeReductionChallenge) {
+            ScreenTimeReductionChallenge specific = (ScreenTimeReductionChallenge) challenge;
+            dto.setReductionPercentage(specific.getReductionPercentage());
+        } else if (challenge instanceof AppBlockingChallenge) {
+            AppBlockingChallenge specific = (AppBlockingChallenge) challenge;
+            dto.setBlockedApps(specific.getBlockedApps());
+        } else if (challenge instanceof DailyLimitChallenge) {
+            DailyLimitChallenge specific = (DailyLimitChallenge) challenge;
+            dto.setMaxDailyMinutes(specific.getMaxDailyMinutes());
         }
 
         return dto;
@@ -216,6 +243,49 @@ public class ChallengeService {
         List<Long> createdIds = new ArrayList<>();
         LocalDate today = LocalDate.now();
         LocalDate nextWeek = today.plusWeeks(1);
+        LocalDate in10Minutes = today; // Same day, just short duration for testing
+        LocalDate in5Minutes = today;
+
+        // TEST CHALLENGES (Short Duration for Testing)
+
+        // TEST 1. Screen Time Reduction - 5 Minutes
+        ScreenTimeReductionChallenge testScreenTime = new ScreenTimeReductionChallenge();
+        testScreenTime.setName("🧪 Test: Quick Screen Time Challenge");
+        testScreenTime.setDescription("TEST: Reduce screen time by 10% in 5 minutes");
+        testScreenTime.setType(ChallengeType.SCREEN_TIME_REDUCTION);
+        testScreenTime.setStartDate(today);
+        testScreenTime.setEndDate(in5Minutes);
+        testScreenTime.setRewardBees(5);
+        testScreenTime.setReductionPercentage(10);
+        testScreenTime.setBaselineScreenTime(null);
+        Challenge savedTest1 = challengeRepository.save(testScreenTime);
+        createdIds.add(savedTest1.getId());
+
+        // TEST 2. App Blocking - 10 Minutes
+        AppBlockingChallenge testAppBlocking = new AppBlockingChallenge();
+        testAppBlocking.setName("🧪 Test: 10-Minute App Block");
+        testAppBlocking.setDescription("TEST: Don't use Instagram for 10 minutes");
+        testAppBlocking.setType(ChallengeType.APP_BLOCKING);
+        testAppBlocking.setStartDate(today);
+        testAppBlocking.setEndDate(in10Minutes);
+        testAppBlocking.setRewardBees(10);
+        testAppBlocking.setBlockedApps(Set.of("com.instagram.android"));
+        Challenge savedTest2 = challengeRepository.save(testAppBlocking);
+        createdIds.add(savedTest2.getId());
+
+        // TEST 3. Daily Limit - Today Only
+        DailyLimitChallenge testDailyLimit = new DailyLimitChallenge();
+        testDailyLimit.setName("🧪 Test: Today's 30-Min Limit");
+        testDailyLimit.setDescription("TEST: Stay under 30 minutes of screen time today");
+        testDailyLimit.setType(ChallengeType.DAILY_LIMIT);
+        testDailyLimit.setStartDate(today);
+        testDailyLimit.setEndDate(today);
+        testDailyLimit.setRewardBees(15);
+        testDailyLimit.setMaxDailyMinutes(30);
+        Challenge savedTest3 = challengeRepository.save(testDailyLimit);
+        createdIds.add(savedTest3.getId());
+
+        // REGULAR CHALLENGES (One Week Duration)
 
         // 1. Screen Time Reduction Challenge
         ScreenTimeReductionChallenge screenTimeChallenge = new ScreenTimeReductionChallenge();

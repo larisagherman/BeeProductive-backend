@@ -19,6 +19,7 @@ public class ChallengeDto {
     private LocalDate startDate;
     private LocalDate endDate;
     private int rewardBees;
+    private Boolean isEnrolled;  // Whether the current user is enrolled in this challenge
 
     // Type-specific fields (only populated based on type)
     private Integer reductionPercentage;      // For SCREEN_TIME_REDUCTION

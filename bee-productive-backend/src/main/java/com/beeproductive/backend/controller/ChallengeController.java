@@ -16,8 +16,10 @@ public class ChallengeController {
     private ChallengeService challengeService;
 
     @GetMapping
-    public List<ChallengeDto> getAllChallenges() {
-        return challengeService.getAllChallenges();
+    public List<ChallengeDto> getAllChallenges(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        String userUid = principal != null ? principal.getUid() : null;
+        return challengeService.getAllChallenges(userUid);
     }
 
     @GetMapping("/{challengeId}")
