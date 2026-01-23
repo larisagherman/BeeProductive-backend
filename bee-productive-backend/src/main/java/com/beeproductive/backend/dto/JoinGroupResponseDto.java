@@ -7,8 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class GroupResponseDto {
-    private String name;
-    private String code;
+public class JoinGroupResponseDto {
+    private String message;
+    private String groupName;
+    private String groupCode;
 }
 

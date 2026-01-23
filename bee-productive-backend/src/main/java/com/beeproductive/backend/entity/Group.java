@@ -22,25 +22,22 @@ public class Group {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String name;
+
+    @Column(unique = true, nullable = false, length = 8)
+    private String code;
+
     @ManyToOne
     @JoinColumn(name = "adminId")
     private User userAdmin;
 
     @ManyToMany
     @JoinTable(
-            name = "group_challenges",
+            name = "user_groups",
             joinColumns = @JoinColumn(name = "group_id"),
-            inverseJoinColumns = @JoinColumn(name = "challenge_id")
+            inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<Challenge> challengeList = new HashSet<>();
-
-    @OneToMany(mappedBy = "group")
-    private Set<MemberDetails> memberData;
-
-
-
-
-
+    private Set<User> users = new HashSet<>();
 
 }

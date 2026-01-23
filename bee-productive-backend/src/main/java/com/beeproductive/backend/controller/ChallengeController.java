@@ -1,10 +1,10 @@
 package com.beeproductive.backend.controller;
 
-import com.beeproductive.backend.dto.ChallengeRequestDto;
-import com.beeproductive.backend.dto.ChallengeResponseDto;
-import com.beeproductive.backend.entity.Challenge;
+import com.beeproductive.backend.dto.*;
+import com.beeproductive.backend.security.FirebaseUserPrincipal;
 import com.beeproductive.backend.service.ChallengeService;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,26 +13,41 @@ import java.util.List;
 @RestController
 @RequestMapping("/challenge")
 public class ChallengeController {
-    private final ChallengeService challengeService;
-    @PostMapping
-    public void create(@RequestBody ChallengeRequestDto challengeRequestDto) {
-        challengeService.createChallenge(challengeRequestDto);
-    }
+    private ChallengeService challengeService;
+
     @GetMapping
-    public List<ChallengeResponseDto> getAllChallenges() {
-        return challengeService.getAllChallenges();
+    public List<ChallengeDto> getAllChallenges(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        String userUid = principal != null ? principal.getUid() : null;
+        return challengeService.getAllChallenges(userUid);
     }
 
-    @GetMapping("/{id}")
-    public ChallengeResponseDto getChallengeById(@PathVariable("id") Long id) {
-        return challengeService.getChallengeById(id);
+    @GetMapping("/{challengeId}")
+    public ChallengeDto getChallengeById(@PathVariable Long challengeId) {
+        return challengeService.getChallengeById(challengeId);
     }
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable("id") Long id) {
-        challengeService.deleteChallenge(id);
+
+    @PostMapping("/join")
+    public JoinChallengeResponseDto joinChallenge(
+            @RequestBody JoinChallengeRequestDto requestDto,
+            @AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        // Set the authenticated user's UID in the DTO
+        requestDto.setUserUid(principal.getUid());
+        return challengeService.joinChallenge(requestDto);
     }
-    @PutMapping("/{id}")
-    public void update(@PathVariable("id") Long id, @RequestBody ChallengeRequestDto challengeRequestDto) {
-        challengeService.updateChallenge(id, challengeRequestDto);
+
+    @GetMapping("/my-challenges")
+    public List<UserChallengeEnrollmentDto> getMyEnrolledChallenges(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        return challengeService.getMyEnrolledChallenges(principal.getUid());
+    }
+
+    @PutMapping("/update-status")
+    public UpdateChallengeStatusResponseDto updateChallengeStatus(
+            @RequestBody UpdateChallengeStatusRequestDto requestDto,
+            @AuthenticationPrincipal FirebaseUserPrincipal principal) {
+        // Set the authenticated user's UID in the DTO
+        requestDto.setUserUid(principal.getUid());
+        return challengeService.updateChallengeStatus(requestDto);
     }
 }

@@ -7,8 +7,11 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class GroupResponseDto {
+public class GroupInfoDto {
+    private Long id;
     private String name;
     private String code;
+    private String adminName;
+    private int memberCount;
 }
 

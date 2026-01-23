@@ -1,6 +1,6 @@
 package com.beeproductive.backend.dto;
 
-import com.beeproductive.backend.entity.MemberKey;
+import com.beeproductive.backend.entity.ChallengeEnrollmentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class MemberDetailsRequestDto {
-    private MemberKey memberKey;
+public class UpdateEnrollmentStatusRequestDto {
+    private ChallengeEnrollmentStatus status;
 }
+
